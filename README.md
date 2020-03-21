@@ -2,7 +2,7 @@
 # Requirements
 We will use Bioconductor package in R to accomplish the following ATACseq steps. For more installation details, please refer to https://www.bioconductor.org/install/.
 
-The updated version of Bioconductor is 3.10, which requires R with the version $\geq3.6$.
+The updated version of Bioconductor is 3.10, which requires R with the version >=3.6.
 
 ```{r,eval=FALSE}
 install.packages("BiocManager")
