@@ -29,7 +29,7 @@ p<-add_argument(p, "--output_dir", short="-o", default=".", help='Output directo
 p<-add_argument(p, "--maxFragLength",short="-maxlen", default=600, help="Maximum fragment length in alignment")
 
 
-argv<-parse_args(p, "")
+argv<-parse_args(p)
 
 cat("Generating a reference genome ...")
 
