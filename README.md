@@ -41,7 +41,7 @@ MACS2 callpeak
 2. Remove blacklisted peaks 
 
 ```{r, eval=FALSE}
-Rscript {blkList.bed} {peak_file} {bam_file}
+Rscript blacklist_remove.R {blkList.bed} {peak_file} {bam_file}
 ```
 
 ## Differential expression ATAC-seq analysis
