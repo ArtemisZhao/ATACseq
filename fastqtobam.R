@@ -66,8 +66,20 @@ cat(paste0("Reading in mapped reads to",argv$seqnames))
 atacReads<-readGAlignmentPairs(sortedBAM,param=ScanBamParam(mapqFilter = 1,
           flag=scanBamFlag(isPaired = TRUE, isProperPair = TRUE),what=c("qname",
           "mapq","isize"), which =GRanges(argv$seqnames,IRanges(1,63025520))))
+}
 
-##################################################################
+if (is.null(argv$seqnames)){
+  cat("Post-alignment processing ...")
+
+  atacReads<-readGAlignmentPairs(sortedBAM, param=ScanBamParam(mapqFilter = 1,
+                      flag=scanBamFlag(isPaired = TRUE, isProperPair = TRUE),
+                    what=c("qname","mapq","isize")))
+}
+
+atacReads_read1 <- GenomicAlignments::first(atacReads) 
+insertSizes <- abs(elementMetadata(atacReads_read1)$isize) 
+
+###########################################################
 cat("Creating BAM files split by insert sizes. ...")
 atacReads_Open <- atacReads[insertSizes < 100, ]
 atacReads_MonoNuc <- atacReads[insertSizes > 180 & insertSizes < 240, ]
@@ -80,4 +92,4 @@ diNucBam <- gsub("\\.bam", "_diNuc\\.bam", sortedBAM)
 export(atacReads_Open, openRegionBam, format = "bam")
 export(atacReads_MonoNuc, monoNucBam, format = "bam")
 export(atacReads_diNuc,diNucBam,format = 'bam')
-}
+

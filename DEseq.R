@@ -1,6 +1,6 @@
 library(ChIPQC)
 library(ChIPseeker)
-#BiocManager::install("limma")
+BiocManager::install("limma")
 library(limma)
 library(Rsubread)
 library(dplyr)
@@ -73,11 +73,14 @@ atacDDS <- DESeqDataSetFromMatrix(myCounts, metaData, ~Group, rowRanges = consen
 atacDDS <- DESeq(atacDDS)
 atac_Rlog <- rlog(atacDDS)
 
+pdf(file=paste0(argv$output_dir,"PCA.pdf",width=6,height=6,bg="white",point=16))
 plotPCA(atac_Rlog, intgroup = "Group", ntop = nrow(atac_Rlog))
+dev.off()
 
 ###need to change
-AffMinusUnaff <- results(atacDDS, c("Group", "Affected", "Unaffected"), format = "GRanges") 
+AffMinusUnaff <- results(atacDDS, c("Group", "CD4CLAn0hct","CD4CLAn0hst"), format = "GRanges") 
 AffMinusUnaff <- AffMinusUnaff[order(AffMinusUnaff$pvalue)]
-print(AffMinusUnaff)
+
+saveRDS(AffMinusUnaff,file="analysistry.rds")
 
 
