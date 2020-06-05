@@ -7,6 +7,7 @@ library(DT)
 library(dplyr)
 library(tidyr)
 #BiocManager::install("ChIPseeker")
+library(argparser,quietly = TRUE)
 
 library(ChIPseeker)
 p<-arg_parser("Blacklist removal")

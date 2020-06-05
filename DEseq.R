@@ -1,12 +1,22 @@
+library(BiocManager)
+#BiocManager::install("ChIPQC")
 library(ChIPQC)
+#BiocManager::install("ChIPseeker")
 library(ChIPseeker)
-BiocManager::install("limma")
+#BiocManager::install("limma")
 library(limma)
+library(DT)
+library(tidyr)
 library(Rsubread)
 library(dplyr)
-BiocManager::install("DESeq2")
+library(rtracklayer)
+#BiocManager::install("DESeq2")
 library(DESeq2)
-
+library(soGGi)
+library(Rsamtools)
+library(GenomicAlignments)
+library(latticeExtra)
+library(argparser,quietly = TRUE)
 
 p<-arg_parser("Differential expression analysis")
 p<-add_argument(p,"peak_type", help="Table contains peak type names")
@@ -18,39 +28,56 @@ p<-add_argument(p, "--output_dir",short="-o",default=".",help="Output directory"
 argv<-parse_args(p)
 
 
-cat("Identifying a set of non-redudant peaks ...")
+cat("Identifying a set of non-redudant peaks ...\n")
 
-peaks <- dir(argv$dir, pattern = "*.narrowPeak", full.names = TRUE)
+peaks <- dir(argv$peak_dir, pattern = "*.narrowPeak", full.names = TRUE)
 
 myPeaks <- lapply(peaks, ChIPQC:::GetGRanges, simple = TRUE)
 
 peakname<- t(read.table(argv$peak_type))
+print(length(peakname))
+print(length(myPeaks))
 
-###maywrong
 if (length(peakname)!=length(myPeaks)){
   print("check your name file")}
 
 if(length(peakname)==length(myPeaks)) {
-  names(myPeaks) <- peaknames
+  names(myPeaks) <- peakname
 }
+
 Group <- factor(t(read.table(argv$group_name))) 
 
-consensusToCount <- soGGi:::runConsensusRegions(GRangesList(myPeaks), "none")
+#consensusToCount <- soGGi:::runConsensusRegions(GRangesList(myPeaks), "none")
+myGRangesList<-GRangesList(myPeaks)   
+reduced <- reduce(unlist(myGRangesList))
+consensusIDs <- paste0("consensus_", seq(1, length(reduced)))
+mcols(reduced) <- do.call(cbind, lapply(myGRangesList, function(x) (reduced %over% x) + 0))
+reducedConsensus <- reduced
+mcols(reducedConsensus) <- cbind(as.data.frame(mcols(reducedConsensus)), consensusIDs)
+consensusIDs <- paste0("consensus_", seq(1, length(reducedConsensus)))
+
+consensusToCount<-reducedConsensus
+
+
+cat("Blacklisted region removal ... \n")
 
 blklist <- import.bed(argv$blkList)
-
 consensusToCount <- consensusToCount[!consensusToCount %over% blklist ]
 
 save(consensusToCount,file=paste0(argv$output_dir,"/consensusToCount.Rdata",sep=""))
 
-cat("Keeping peaks present in more than two replicates ")
+cat("Keeping peaks present in more than two replicates ...\n ")
+
 occurrences <- elementMetadata(consensusToCount) %>% as.data.frame %>% dplyr::select(-consensusIDs) %>%
   rowSums
-table(occurrences) %>% rev %>% cumsum
 
+#table(occurrences) %>% rev %>% cumsum
 consensusToCount <- consensusToCount[occurrences >= 2, ] 
 
-bamsToCount <- dir(argv$bam_dir, full.names = TRUE, pattern = "*.\\.bam $")
+save(consensusToCount,file=paste0(argv$output_dir,"/consensusToCount2.Rdata",sep=""))
+
+cat("Loading in bam files ...\n")
+bamsToCount <- dir(argv$bam_dir, full.names = TRUE, pattern = "*.\\.bam$")
 
 # indexBam(bamsToCount)
 
@@ -63,24 +90,25 @@ fcResults <- featureCounts(bamsToCount, annot.ext = regionsToCount,
 
 myCounts <- fcResults$counts
 
-colnames(myCounts) <- peaknames
+colnames(myCounts) <- peakname
 
 save(myCounts, file = paste0(argv$output_dir,"/countsFromATAC.RData"))
 
 metaData <- data.frame(Group, row.names = colnames(myCounts))
 
+cat("DEseq differential analysis ...\n")
 atacDDS <- DESeqDataSetFromMatrix(myCounts, metaData, ~Group, rowRanges = consensusToCount) 
 atacDDS <- DESeq(atacDDS)
 atac_Rlog <- rlog(atacDDS)
 
-pdf(file=paste0(argv$output_dir,"PCA.pdf",width=6,height=6,bg="white",point=16))
+pdf(file=paste0(argv$output_dir,"/PCA.pdf",width=6,height=6,bg="white",point=16))
 plotPCA(atac_Rlog, intgroup = "Group", ntop = nrow(atac_Rlog))
 dev.off()
 
-###need to change
-AffMinusUnaff <- results(atacDDS, c("Group", "CD4CLAn0hct","CD4CLAn0hst"), format = "GRanges") 
+###group need to specify
+AffMinusUnaff <- results(atacDDS, c("Group", "0h","24h"), format = "GRanges") 
 AffMinusUnaff <- AffMinusUnaff[order(AffMinusUnaff$pvalue)]
 
-saveRDS(AffMinusUnaff,file="analysistry.rds")
-
+print(AffMinusUnaff)
+save(AffMinusUnaff,file="pvalues.Rdata")
 

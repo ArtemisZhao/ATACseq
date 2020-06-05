@@ -58,3 +58,11 @@ Rscript DESeq.R {peak_type} {group} {blkList.bed}\
 --bam_dir ./bamfiles \
 --output_dir ./output
 ```
+
+
+Among the input, {group} should denote the treatment/control group that each cell belongs to, e.g., 24h v.s. 0h. Notice that a text files recording the information should be input.
+
+{peak_type} should be a text file which records the type of each cell, it should be consistent with the group sequence. e.g., id1_24h, id2_0h... 
+
+{--peak_dir} points to a directory that preserves all the narrowPeak files. Similarly, {--bam_dir} contains all the bam files that user intends to include in the analysis.
+
