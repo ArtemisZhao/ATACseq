@@ -34,7 +34,7 @@ MACS2 callpeak
 -g hs
 ```
 
-## Blacklist removal
+### Blacklist removal
 
 1. QC for low quality, duplicates and signal distribution
 
@@ -44,7 +44,7 @@ MACS2 callpeak
 Rscript blacklist_remove.R {blkList.bed} {peak_file} {bam_file}
 ```
 
-## Differential expression ATAC-seq analysis
+### Differential expression ATAC-seq analysis
 
 1. Identify non-redudant peaks
 
