@@ -17,7 +17,7 @@ library(Rsamtools)
 library(GenomicAlignments)
 library(latticeExtra)
 library(argparser,quietly = TRUE)
-
+library(diffloop)
 p<-arg_parser("Differential expression analysis")
 p<-add_argument(p,"peak_type", help="Table contains peak type names")
 p<-add_argument(p, "group_name",help="Table contains group names")
@@ -62,6 +62,8 @@ consensusToCount<-reducedConsensus
 cat("Blacklisted region removal ... \n")
 
 blklist <- import.bed(argv$blkList)
+
+consensusToCount<- addchr(consensusToCount)
 consensusToCount <- consensusToCount[!consensusToCount %over% blklist ]
 
 save(consensusToCount,file=paste0(argv$output_dir,"/consensusToCount.Rdata",sep=""))

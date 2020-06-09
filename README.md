@@ -44,6 +44,12 @@ MACS2 callpeak
 Rscript blacklist_remove.R {blkList.bed} {peak_file} {bam_file}
 ```
 
+3. An alternative way of removing blacklisted regions is use bedtools.
+
+```{r,eval=FALSE}
+bedtools intersect -v -abam {bam_file} -b {blklist.bed} > {filted_bam}
+```
+
 ### Differential expression ATAC-seq analysis
 
 1. Identify non-redudant peaks
