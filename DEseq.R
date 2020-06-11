@@ -101,8 +101,6 @@ save(myCounts, file = paste0(argv$output_dir,"/countsFromATAC.RData"))
 metaData <- data.frame(Group, row.names = colnames(myCounts))
 
 
-if()
-
 cat("DEseq differential analysis ...\n")
 atacDDS <- DESeqDataSetFromMatrix(myCounts, metaData, ~Group, rowRanges = consensusToCount) 
 atacDDS <- DESeq(atacDDS)

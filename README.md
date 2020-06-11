@@ -33,14 +33,14 @@ MACS2 callpeak -t ${bam_file}  -f BAMPE --outputdir $path_to_output\
 ```
 By following this process, we would get 3 files.
 
-- {output_name}_peaks.narrowPeak: Narrow peak format suitable for IGV and further analysis
+- {output_name}_peaks.narrowPeak: Narrow peak format suitable for IGV and further analysis;
 
-- {output_name}_peaks.xls: Peak table suitable for review in excel.(not actually a xls but a tsv)
+- {output_name}_peaks.xls: Peak table suitable for review in excel (not actually a xls but a tsv);
 
-- {output_name}_summits.bed: Summit positions for peaks useful for finding motifs and plotting
+- {output_name}_summits.bed: Summit positions for peaks useful for finding motifs and plotting.
 
 
-## Blacklist removal
+## Blacklisted regions removal
 
 We apply bedtools to the original bam files to remove blacklisted regions. 
 
@@ -53,28 +53,28 @@ In this step, we will obtain the filtered bam files.
 Notice that this serves as an alternative way of using ChIPQC to remove blacklisted regions. The guidance for the old one is as followed,
 
 ```{r,eval=FALSE}
-Rscript blacklist_remove.R ${blkList.bed}  ${peak_file} ${bam_file} 
+Rscript blacklist_remove.R ${blkList.bed} ${peak_file} ${bam_file} 
 ```
 
 ## Differential expression ATAC-seq analysis
 
 ### DEseq2
 
-1. Identify non-redudant peaks
+#### 1. Identify non-redudant peaks
 
- - Define a set of non-redundant peaks present in at least 2 samples.
+  - Define a set of non-redundant peaks present in at least 2 samples.
 
-2. Counting for differential ATAC-seq 
+#### 2. Counting for differential ATAC-seq 
 
- - filter the peaks which are present in at least two replicates.
+  - filter the peaks which are present in at least two replicates.
 
- - Use Rsubread to count paired reads landing in peaks
+  - Use Rsubread to count paired reads landing in peaks.
 
-3. Contruct a DESeq2 object 
+#### 3. Contruct a DESeq2 object 
 
-- pass the count to __DESeqDataSetFromMatrix__ function so as to access these from DESeq2 later.
+  - pass the count to __DESeqDataSetFromMatrix__ function so as to access these from DESeq2 later.
 
-
+#### Command
 ```{r,eval=FALSE}
 Rscript DEseq.R ${individualID} ${covariates} ${blkList.bed}\
 --peak_dir {path_to_peakfiles} \
@@ -82,14 +82,28 @@ Rscript DEseq.R ${individualID} ${covariates} ${blkList.bed}\
 --output_dir {path_to_output}
 ```
 
-Notice that, while using the __DEseq.R__ script presented above, two text files that record the individual IDs and their corresponding conditions (covariates information) should be input, which refers to as {individualID} and {covariates} as bellow. 
+#### Input
+While using the __DEseq.R__ script presented above, two text files that record the individual IDs and their corresponding conditions (covariates information) should be input, which refers to as {individualID} and {covariates} as bellow. 
 
-{covariates} should denote the treatment/control group that each bam file belongs to, e.g., 24h v.s. 0h.  
+- {covariates} should denote the treatment/control group that each bam file belongs to, e.g., 24h v.s. 0h.  
 
-{individualID} should record the ID of each file, and should be consistent with the sequence of the covariates. e.g., id1_24h, id2_0h... 
+- {individualID} should record the ID of each file, and should be consistent with the sequence of the covariates. e.g., id1_24h, id2_0h... 
 
-{--peak_dir} points to a directory that preserves all the narrowPeak files which is output by the peak calling procedure. Similarly, {--bam_dir} contains all the bam files that user intends to include in t he analysis, e.g., filtered bam files output by the blklist removal step.
+- {--peak_dir} points to a directory that preserves all the narrowPeak files which is output by the peak calling procedure. 
+
+- Similarly, {--bam_dir} contains all the bam files that user intends to include in t he analysis, e.g., filtered bam files output by the blklist removal step.
+
+#### Output
 
 This step generates the following files for future usage, 
 
-### limma combined with voom
+- {countMatrix}: count matrix records the counts landing in peaks;
+
+- {atacDDS}: a DEseq object that is used for test any differences in ATAC-seq signal between groups.
+
+#### Further analysis 
+
+```{r}
+
+```
+### Limma 
