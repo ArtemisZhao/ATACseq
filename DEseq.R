@@ -18,6 +18,7 @@ library(GenomicAlignments)
 library(latticeExtra)
 library(argparser,quietly = TRUE)
 library(diffloop)
+
 p<-arg_parser("Differential expression analysis")
 p<-add_argument(p,"peak_type", help="Table contains peak type names")
 p<-add_argument(p, "group_name",help="Table contains group names")
@@ -63,6 +64,7 @@ cat("Blacklisted region removal ... \n")
 
 blklist <- import.bed(argv$blkList)
 
+###################################### this step add chr to seqnames
 consensusToCount<- addchr(consensusToCount)
 consensusToCount <- consensusToCount[!consensusToCount %over% blklist ]
 
@@ -98,19 +100,24 @@ save(myCounts, file = paste0(argv$output_dir,"/countsFromATAC.RData"))
 
 metaData <- data.frame(Group, row.names = colnames(myCounts))
 
+
+if()
+
 cat("DEseq differential analysis ...\n")
 atacDDS <- DESeqDataSetFromMatrix(myCounts, metaData, ~Group, rowRanges = consensusToCount) 
 atacDDS <- DESeq(atacDDS)
 atac_Rlog <- rlog(atacDDS)
 
-pdf(file=paste0(argv$output_dir,"/PCA.pdf",width=6,height=6,bg="white",point=16))
-plotPCA(atac_Rlog, intgroup = "Group", ntop = nrow(atac_Rlog))
-dev.off()
+save(atacDDS,file=paste0(argv$output_dir,"/atacDDS.Rdata"))
+
+#pdf(file=paste0(argv$output_dir,"/PCA.pdf",width=6,height=6,bg="white",point=16))
+#plotPCA(atac_Rlog, intgroup = "Group", ntop = nrow(atac_Rlog))
+#dev.off()
 
 ###group need to specify
-AffMinusUnaff <- results(atacDDS, c("Group", "0h","24h"), format = "GRanges") 
-AffMinusUnaff <- AffMinusUnaff[order(AffMinusUnaff$pvalue)]
+#AffMinusUnaff <- results(atacDDS, c("Group", "0h","24h"), format = "GRanges") 
+#AffMinusUnaff <- AffMinusUnaff[order(AffMinusUnaff$pvalue)]
 
-print(AffMinusUnaff)
-save(AffMinusUnaff,file="pvalues.Rdata")
+#print(AffMinusUnaff)
+#save(AffMinusUnaff,file="pvalues.Rdata")
 

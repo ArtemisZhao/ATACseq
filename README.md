@@ -1,6 +1,6 @@
-## Running the pipeline
+# Running the ATAC-seq pipeline
 
-### Fastq to BAM process
+## Fastq to BAM process
 
 1. Generate the reference genome
 
@@ -21,54 +21,75 @@ Rscript fastqtobam.R {genome_file} {input_1} {input_2} {prefix}\
  --maxFragLength 2000 
 ```
 
-### Peak calling - Finding open regions
 
-We will use MACS2 in the following steps. For detailed reference, please see https://github.com/taoliu/MACS.
+## Peak calling - Finding open regions
 
-```{r,eval=FALSE}
-MACS2 callpeak 
--t $outputbam.bam\
--f BAMPE \
---outputdir ./output\
---name $NAME \
--g hs
-```
-
-### Blacklist removal
-
-1. QC for low quality, duplicates and signal distribution
-
-2. Remove blacklisted peaks 
-
-```{r, eval=FALSE}
-Rscript blacklist_remove.R {blkList.bed} {peak_file} {bam_file}
-```
-
-3. An alternative way of removing blacklisted regions is use bedtools.
+We use MACS2 in this step to call peak to the bam files. For detailed reference, please refer to https://github.com/taoliu/MACS.
 
 ```{r,eval=FALSE}
-bedtools intersect -v -abam {bam_file} -b {blklist.bed} > {filted_bam}
+MACS2 callpeak -t ${bam_file}  -f BAMPE --outputdir $path_to_output\
+--name ${output_name} -g hs --nomodel --shift -100 \
+--extsize 200 -q 0.05\
+```
+By following this process, we would get 3 files.
+
+- {output_name}_peaks.narrowPeak: Narrow peak format suitable for IGV and further analysis
+
+- {output_name}_peaks.xls: Peak table suitable for review in excel.(not actually a xls but a tsv)
+
+- {output_name}_summits.bed: Summit positions for peaks useful for finding motifs and plotting
+
+
+## Blacklist removal
+
+We apply bedtools to the original bam files to remove blacklisted regions. 
+
+```{r,eval=FALSE}
+bedtools intersect -v -abam ${bam_file} -b ${blklist.bed} > ${filtered_bam_file}
 ```
 
-### Differential expression ATAC-seq analysis
+In this step, we will obtain the filtered bam files.
+
+Notice that this serves as an alternative way of using ChIPQC to remove blacklisted regions. The guidance for the old one is as followed,
+
+```{r,eval=FALSE}
+Rscript blacklist_remove.R ${blkList.bed}  ${peak_file} ${bam_file} 
+```
+
+## Differential expression ATAC-seq analysis
+
+### DEseq2
 
 1. Identify non-redudant peaks
 
-2. Counting for differential ATAC-seq
+ - Define a set of non-redundant peaks present in at least 2 samples.
 
-3. DESeq2 for differential ATAC-seq
+2. Counting for differential ATAC-seq 
+
+ - filter the peaks which are present in at least two replicates.
+
+ - Use Rsubread to count paired reads landing in peaks
+
+3. Contruct a DESeq2 object 
+
+- pass the count to __DESeqDataSetFromMatrix__ function so as to access these from DESeq2 later.
+
 
 ```{r,eval=FALSE}
-Rscript DESeq.R {peak_type} {group} {blkList.bed}\
---peak_dir ./peakfiles \
---bam_dir ./bamfiles \
---output_dir ./output
+Rscript DEseq.R ${individualID} ${covariates} ${blkList.bed}\
+--peak_dir {path_to_peakfiles} \
+--bam_dir {path_to_bamfiles} \
+--output_dir {path_to_output}
 ```
 
+Notice that, while using the __DEseq.R__ script presented above, two text files that record the individual IDs and their corresponding conditions (covariates information) should be input, which refers to as {individualID} and {covariates} as bellow. 
 
-Among the input, {group} should denote the treatment/control group that each cell belongs to, e.g., 24h v.s. 0h. Notice that a text files recording the information should be input.
+{covariates} should denote the treatment/control group that each bam file belongs to, e.g., 24h v.s. 0h.  
 
-{peak_type} should be a text file which records the type of each cell, it should be consistent with the group sequence. e.g., id1_24h, id2_0h... 
+{individualID} should record the ID of each file, and should be consistent with the sequence of the covariates. e.g., id1_24h, id2_0h... 
 
-{--peak_dir} points to a directory that preserves all the narrowPeak files. Similarly, {--bam_dir} contains all the bam files that user intends to include in the analysis.
+{--peak_dir} points to a directory that preserves all the narrowPeak files which is output by the peak calling procedure. Similarly, {--bam_dir} contains all the bam files that user intends to include in t he analysis, e.g., filtered bam files output by the blklist removal step.
 
+This step generates the following files for future usage, 
+
+### limma combined with voom
