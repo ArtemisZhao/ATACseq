@@ -31,7 +31,8 @@ MACS2 callpeak -t ${bam_file}  -f BAMPE --outputdir $path_to_output\
 --name ${output_name} -g hs --nomodel --shift -100 \
 --extsize 200 -q 0.05\
 ```
-By following this process, we would get 3 files.
+
+This process generates 3 files,
 
 - {output_name}_peaks.narrowPeak: Narrow peak format suitable for IGV and further analysis;
 
@@ -48,17 +49,14 @@ We apply bedtools to the original bam files to remove blacklisted regions.
 bedtools intersect -v -abam ${bam_file} -b ${blklist.bed} > ${filtered_bam_file}
 ```
 
-In this step, we will obtain the filtered bam files.
+In this step, we will obtain the filtered bam files named as {filtered_bam_file}.
 
-Notice that this serves as an alternative way of using ChIPQC to remove blacklisted regions. The guidance for the old one is as followed,
+Notice that this serves as an alternative way of using ChIPQC to remove blacklisted regions. The guidance for the old one can be found in the oldreadme.
 
-```{r,eval=FALSE}
-Rscript blacklist_remove.R ${blkList.bed} ${peak_file} ${bam_file} 
-```
 
 ## Differential expression ATAC-seq analysis
 
-### DEseq2
+### I. DEseq2
 
 #### 1. Identify non-redudant peaks
 
@@ -76,34 +74,38 @@ Rscript blacklist_remove.R ${blkList.bed} ${peak_file} ${bam_file}
 
 #### Command
 ```{r,eval=FALSE}
-Rscript DEseq.R ${individualID} ${covariates} ${blkList.bed}\
+Rscript DEseq.R ${ID} ${covariate} ${blkList.bed}\
 --peak_dir {path_to_peakfiles} \
 --bam_dir {path_to_bamfiles} \
---output_dir {path_to_output}
+--output_dir {path_to_output} \
+--add_cov ${SoN_ratio}
 ```
 
 #### Input
-While using the __DEseq.R__ script presented above, two text files that record the individual IDs and their corresponding conditions (covariates information) should be input, which refers to as {individualID} and {covariates} as bellow. 
+While using the __DEseq.R__ script presented above, two text files that record the IDs and the corresponding conditions (covariates information) should be input, which refers to as {individualID} and {covariates} as above. 
 
-- {covariates} should denote the treatment/control group that each bam file belongs to, e.g., 24h v.s. 0h.  
+- {covariate} denotes the treatment/control group that each bam file belongs to, e.g., 24h v.s. 0h; or more complicated, CD8CLAp v.s. CD8CLAn v.s. CD4CLAp... 
 
-- {individualID} should record the ID of each file, and should be consistent with the sequence of the covariates. e.g., id1_24h, id2_0h... 
+- {ID} should record the ID of each file, and should be consistent with the sequence of the covariates. e.g., id1_24h, id2_0h... 
 
-- {--peak_dir} points to a directory that preserves all the narrowPeak files which is output by the peak calling procedure. 
+- {--peak_dir} points to a directory that preserves all the narrowPeak files output by the Peak calling step. 
 
-- Similarly, {--bam_dir} contains all the bam files that user intends to include in t he analysis, e.g., filtered bam files output by the blklist removal step.
+- Similarly, {--bam_dir} contains all the bam files that user intends to include in the analysis, e.g., filtered bam files output by the blacklist removal step.
+
+- Notice that there is an optional argument that allows user to add in one additional covaraite, e.g., signal-to-noise ratio, age and etc.
 
 #### Output
 
-This step generates the following files for future usage, 
+The DEseq2 step generates the following files for future usage and summarize, 
 
 - {countMatrix}: count matrix records the counts landing in peaks;
 
 - {atacDDS}: a DEseq object that is used for test any differences in ATAC-seq signal between groups.
 
-#### Further analysis 
+- Files that records the contrast information, corresponding p-values for the siginificant peaks, and genes anotated to the peaks. These files are named by following the pattern that {Group_CD4CLAp0hct_vs_CD4CLAn0hct}, in which CD4CLAp0hct anc CD4CLAn0hct are replaced by different conditions existed in the covariate factor.
 
-```{r}
 
-```
-### Limma 
+### Limma
+
+
+

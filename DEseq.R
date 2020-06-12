@@ -18,6 +18,9 @@ library(GenomicAlignments)
 library(latticeExtra)
 library(argparser,quietly = TRUE)
 library(diffloop)
+library(TxDb.Hsapiens.UCSC.hg19.knownGene)
+library(mygene)
+library(tracktables)
 
 p<-arg_parser("Differential expression analysis")
 p<-add_argument(p,"peak_type", help="Table contains peak type names")
@@ -26,6 +29,7 @@ p<-add_argument(p, "blkList", help="black list bed file")
 p<-add_argument(p, "--peak_dir", short="-pdir", default=".", help='Peak file directory')
 p<-add_argument(p,"--bam_dir",short="-bdir", default=".", help='Bam file directory')
 p<-add_argument(p, "--output_dir",short="-o",default=".",help="Output directory")
+p<-add_argument(p, "--add_cov", default=NULL, help="Additional covariate, e.g. signal to noise ratio")
 argv<-parse_args(p)
 
 
@@ -47,6 +51,10 @@ if(length(peakname)==length(myPeaks)) {
 }
 
 Group <- factor(t(read.table(argv$group_name))) 
+
+if (!is.null(argv$add_cov)){
+AddGroup <- factor(t(read.table(argv$add_cov)))
+}
 
 #consensusToCount <- soGGi:::runConsensusRegions(GRangesList(myPeaks), "none")
 myGRangesList<-GRangesList(myPeaks)   
@@ -98,24 +106,43 @@ colnames(myCounts) <- peakname
 
 save(myCounts, file = paste0(argv$output_dir,"/countsFromATAC.RData"))
 
-metaData <- data.frame(Group, row.names = colnames(myCounts))
-
-
 cat("DEseq differential analysis ...\n")
-atacDDS <- DESeqDataSetFromMatrix(myCounts, metaData, ~Group, rowRanges = consensusToCount) 
-atacDDS <- DESeq(atacDDS)
-atac_Rlog <- rlog(atacDDS)
+if (!is.null(argv$add_cov)){
+  metaData <- data.frame(cbind(Group,AddGroup), row.names = colnames(myCounts))
+  atacDDS <- DESeqDataSetFromMatrix(myCounts, metaData, ~Group+AddGroup+Group:AddGroup, 
+                                    rowRanges = consensusToCount) 
+  atacDDS <- DESeq(atacDDS)
+  atac_Rlog <- rlog(atacDDS)
+  
+  save(atacDDS,file=paste0(argv$output_dir,"/atacDDS.Rdata"))
+  
+  } else{
+  metaData <- data.frame(cbind(Group), row.names = colnames(myCounts))
+ atacDDS <- DESeqDataSetFromMatrix(myCounts, metaData, ~Group, rowRanges = consensusToCount) 
+ atacDDS <- DESeq(atacDDS)
+ atac_Rlog <- rlog(atacDDS)
 
-save(atacDDS,file=paste0(argv$output_dir,"/atacDDS.Rdata"))
+ save(atacDDS,file=paste0(argv$output_dir,"/atacDDS.Rdata"))
+}
 
-#pdf(file=paste0(argv$output_dir,"/PCA.pdf",width=6,height=6,bg="white",point=16))
-#plotPCA(atac_Rlog, intgroup = "Group", ntop = nrow(atac_Rlog))
-#dev.off()
+resultname1<-resultsNames(atacDDS)
 
-###group need to specify
-#AffMinusUnaff <- results(atacDDS, c("Group", "0h","24h"), format = "GRanges") 
-#AffMinusUnaff <- AffMinusUnaff[order(AffMinusUnaff$pvalue)]
+resultname<- gsub("vs_","",resultname)
+resultname <- strsplit(resultname,c("_"))[-1]
 
-#print(AffMinusUnaff)
-#save(AffMinusUnaff,file="pvalues.Rdata")
 
+a <- lapply(resultname[1:2],
+            function(x){
+              res <- results(atacDDS, contrast=x, format = "GRanges") 
+              res <- res[order(res$pvalue)]
+              res <- res[(!is.na(res$padj) & res$padj < 0.05 & abs(res$log2FoldChange) >= 0.585), ]
+              gr <- annotatePeak(res,TxDb = TxDb.Hsapiens.UCSC.hg19.knownGene)
+              gr<-as.data.frame(as.GRanges(gr))
+              GeneName <- queryMany(gr$geneId, scopes="entrezgene", fields="symbol", species="human",returnall=TRUE)
+              gr$gene.symbol <- GeneName$response$symbol
+              gr
+            })
+
+for (i in 1:length(a)){
+  write.table(a[[i]], file=paste0(argv$output_dir,"/",resultname1[i+1],".txt"), quote=F, sep="\t", row.names=T, col.names=T)
+}
