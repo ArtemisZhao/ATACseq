@@ -23,8 +23,8 @@ library(mygene)
 library(tracktables)
 
 p<-arg_parser("Differential expression analysis - DEseq")
-p<-add_argument(p,"peak_type", help="Table contains peak type names")
-p<-add_argument(p, "group_name",help="Table contains group names")
+p<-add_argument(p,"peak_type", help="Table contains peak type names for each file")
+p<-add_argument(p, "group_name",help="Table contains covariate factor")
 p<-add_argument(p, "blkList", help="black list bed file")
 p<-add_argument(p, "--peak_dir", short="-pdir", default=".", help='Peak file directory')
 p<-add_argument(p,"--bam_dir",short="-bdir", default=".", help='Bam file directory')
@@ -52,7 +52,7 @@ if(length(peakname)==length(myPeaks)) {
 
 Group <- factor(t(read.table(argv$group_name))) 
 
-if (!is.null(argv$add_cov)){
+if (!argv$add_cov=="NULL"){
 AddGroup <- factor(t(read.table(argv$add_cov)))
 }
 
@@ -107,7 +107,7 @@ colnames(myCounts) <- peakname
 save(myCounts, file = paste0(argv$output_dir,"/countsFromATAC.RData"))
 
 cat("DEseq differential analysis ...\n")
-if (!is.null(argv$add_cov)){
+if (!argv$add_cov=="NULL"){
   metaData <- data.frame(cbind(Group,AddGroup), row.names = colnames(myCounts))
   atacDDS <- DESeqDataSetFromMatrix(myCounts, metaData, ~Group+AddGroup+Group:AddGroup, 
                                     rowRanges = consensusToCount) 

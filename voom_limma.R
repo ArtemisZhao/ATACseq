@@ -7,15 +7,15 @@ library(stringr)
 library(limma)
 library(edgeR)
 
-#setwd('/net/wonderland/home/zhaolinz/practice/PCA')
 
-#load("0407.ATAC.countMatrix.RData")
 p<-arg_parser("Differential expression analysis")
 p<-add_argument(p,"count_matrix", help="Matrix that records count landing in peaks")
-p<-add_argument(p,"",help=)
+p<-add_argument(p,"covariate",help="Text table contains the covariate(group) information")
+p<-add_argument(p,"--add_cov",default=NULL,help="Additional covariate")
+p<-add_argument(p, "--output_dir",short="-o",default=".",help="Output directory")
 argv<-parse_args(p)
 
-coldata <- read.csv('0407.all.v2.csv',header=TRUE)
+coldata <- read.table(argv$covariate)
 
 cm<-argv$count_matrix
 

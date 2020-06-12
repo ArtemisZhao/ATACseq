@@ -63,7 +63,7 @@ Notice that this serves as an alternative way of using ChIPQC to remove blacklis
  1. Identify non-redudant peaks 
  
 
- 2. Counting for differential ATAC-seq - use Rsubread to count paired reads landing in peaks.
+ 2. Counting for differential ATAC-seq - use __Rsubread__ to count paired reads landing in peaks.
 
  3. Contruct a DESeq2 object - Pass the count to __DESeqDataSetFromMatrix__ function 
  
@@ -92,7 +92,7 @@ While using the __DEseq.R__ script presented above, two text files that record t
 
 - {--bam_dir} contains all the bam files that user intends to include in the analysis, e.g., filtered bam files output by the blacklist removal step.
 
-- {--add_cov}, there is an optional argument that allows user to add in one additional covaraite, e.g., signal-to-noise ratio, age and etc.
+- {--add_cov}, there is an optional argument that allows user to add in one additional covaraite, e.g., signal-to-noise ratio, age and etc. The default is NULL.
 
 #### Output
 
@@ -107,5 +107,10 @@ The DEseq2 step generates the following files for future usage and summarize,
 
 ### II. Limma and voom
 
-
+#### Command
+```{r,eval=FALSE}
+Rscript voom_limma.R ${count_matrix} ${covariate} \
+--output_dir {path_to_output} \
+--add_cov ${StN_ratio}
+```
 
