@@ -58,19 +58,23 @@ Notice that this serves as an alternative way of using ChIPQC to remove blacklis
 
 ### I. DEseq2
 
-#### 1. Identify non-redudant peaks
+#### Steps 
+
+ 1. Identify non-redudant peaks
 
   - Define a set of non-redundant peaks present in at least 2 samples.
 
-#### 2. Counting for differential ATAC-seq 
+ 2. Counting for differential ATAC-seq 
 
   - filter the peaks which are present in at least two replicates.
 
   - Use Rsubread to count paired reads landing in peaks.
 
-#### 3. Contruct a DESeq2 object 
+ 3. Contruct a DESeq2 object 
 
   - pass the count to __DESeqDataSetFromMatrix__ function so as to access these from DESeq2 later.
+  
+ 4. Annotate peaks to genes
 
 #### Command
 ```{r,eval=FALSE}
@@ -78,21 +82,22 @@ Rscript DEseq.R ${ID} ${covariate} ${blkList.bed}\
 --peak_dir {path_to_peakfiles} \
 --bam_dir {path_to_bamfiles} \
 --output_dir {path_to_output} \
---add_cov ${SoN_ratio}
+--add_cov ${StN_ratio}
 ```
 
 #### Input
 While using the __DEseq.R__ script presented above, two text files that record the IDs and the corresponding conditions (covariates information) should be input, which refers to as {individualID} and {covariates} as above. 
 
-- {covariate} denotes the treatment/control group that each bam file belongs to, e.g., 24h v.s. 0h; or more complicated, CD8CLAp v.s. CD8CLAn v.s. CD4CLAp... 
 
-- {ID} should record the ID of each file, and should be consistent with the sequence of the covariates. e.g., id1_24h, id2_0h... 
+- {ID} should record the ID of each file, and should be consistent with the sequence of the covariate information. e.g., id1_24h, id2_0h... 
+
+- {covariate} denotes the group that each bam file belongs to, e.g., 24h v.s. 0h; or more complicated, CD8CLAp v.s. CD8CLAn v.s. CD4CLAp... 
 
 - {--peak_dir} points to a directory that preserves all the narrowPeak files output by the Peak calling step. 
 
-- Similarly, {--bam_dir} contains all the bam files that user intends to include in the analysis, e.g., filtered bam files output by the blacklist removal step.
+- {--bam_dir} contains all the bam files that user intends to include in the analysis, e.g., filtered bam files output by the blacklist removal step.
 
-- Notice that there is an optional argument that allows user to add in one additional covaraite, e.g., signal-to-noise ratio, age and etc.
+- {--add_cov}, there is an optional argument that allows user to add in one additional covaraite, e.g., signal-to-noise ratio, age and etc.
 
 #### Output
 
@@ -102,10 +107,10 @@ The DEseq2 step generates the following files for future usage and summarize,
 
 - {atacDDS}: a DEseq object that is used for test any differences in ATAC-seq signal between groups.
 
-- Files that records the contrast information, corresponding p-values for the siginificant peaks, and genes anotated to the peaks. These files are named by following the pattern that {Group_CD4CLAp0hct_vs_CD4CLAn0hct}, in which CD4CLAp0hct anc CD4CLAn0hct are replaced by different conditions existed in the covariate factor.
+- Files that records the contrast(group) information, the corresponding p-values for the siginificant peaks, and genes anotated to the peaks. These files are named by following the pattern of {Group_CD4CLAp0hct_vs_CD4CLAn0hct.txt}, in which CD4CLAp0hct anc CD4CLAn0hct are replaced by different groups existing in the covariate factor.
 
 
-### Limma
+### II. Limma and voom
 
 
 
