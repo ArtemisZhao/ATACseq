@@ -60,21 +60,16 @@ Notice that this serves as an alternative way of using ChIPQC to remove blacklis
 
 #### Steps 
 
- 1. Identify non-redudant peaks
+ 1. Identify non-redudant peaks 
+ 
 
-  - Define a set of non-redundant peaks present in at least 2 samples.
+ 2. Counting for differential ATAC-seq - use Rsubread to count paired reads landing in peaks.
 
- 2. Counting for differential ATAC-seq 
-
-  - filter the peaks which are present in at least two replicates.
-
-  - Use Rsubread to count paired reads landing in peaks.
-
- 3. Contruct a DESeq2 object 
-
-  - pass the count to __DESeqDataSetFromMatrix__ function so as to access these from DESeq2 later.
-  
+ 3. Contruct a DESeq2 object - Pass the count to __DESeqDataSetFromMatrix__ function 
+ 
+ 
  4. Annotate peaks to genes
+ 
 
 #### Command
 ```{r,eval=FALSE}

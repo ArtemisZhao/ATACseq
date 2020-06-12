@@ -22,7 +22,7 @@ library(TxDb.Hsapiens.UCSC.hg19.knownGene)
 library(mygene)
 library(tracktables)
 
-p<-arg_parser("Differential expression analysis")
+p<-arg_parser("Differential expression analysis - DEseq")
 p<-add_argument(p,"peak_type", help="Table contains peak type names")
 p<-add_argument(p, "group_name",help="Table contains group names")
 p<-add_argument(p, "blkList", help="black list bed file")

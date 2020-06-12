@@ -7,17 +7,23 @@ library(stringr)
 library(limma)
 library(edgeR)
 
+#setwd('/net/wonderland/home/zhaolinz/practice/PCA')
 
-load("0407.ATAC.countMatrix.RData")
+#load("0407.ATAC.countMatrix.RData")
+p<-arg_parser("Differential expression analysis")
+p<-add_argument(p,"count_matrix", help="Matrix that records count landing in peaks")
+p<-add_argument(p,"",help=)
+argv<-parse_args(p)
 
 coldata <- read.csv('0407.all.v2.csv',header=TRUE)
 
-cts <- (fc$counts)
+cm<-argv$count_matrix
+
+cts <- (cm$counts)
 
 colnames(cts) <- coldata$SampleID
 
 dim(cts)
-
 
 d0 <- DGEList(cts)
 
@@ -27,16 +33,13 @@ d0 <- calcNormFactors(d0) #TMM default,the weighted trimmed mean of M-values (to
 
 max(rowSums(d0$counts))
 
-
 min(rowSums(d0$counts))
-
 
 dim(d0[rowSums(d0$counts)> 6960,]) #average reads per lib >10
 
 d <- d0[rowSums(d0$counts)> 6960,]
 
 dim(d)
-
 
 f <- factor(coldata$Celltype.Treats)
 
@@ -52,12 +55,9 @@ dev.off()
 
 save(y, file="0407.ATAC.voomWithQualityWeights.RData")
 
-
 head(cpm(y, log=F))#to yield the normalized counts from y.
 
-
 fit <- lmFit(y, design)
-
 
 cont.matrix <- makeContrasts(P1="f0hctCD4CLAP-f0hctCD4CLAN",
                              P2="f0hctCD8CLAP-f0hctCD8CLAN", 
@@ -120,110 +120,3 @@ for(i in 1:8){
 
 
 
-
-
-library(ChIPseeker)
-
-library(rtracklayer)
-
-library(TxDb.Hsapiens.UCSC.hg19.knownGene)
-
-library(tracktables)
-
-library(ReactomePA)
-
-library(mygene)
-
-library(clusterProfiler)
-
-
-
-setwd('/net/wonderland/home/zhaolinz/practice/PCA')
-
-#readPeak
-
-DEG <- dir("/net/wonderland/home/zhaolinz/practice/PCA", pattern = "0407_anno.adj*", full.names = TRUE)
-
-for(i in 1:length(DEG)){
-  
-  print(DEG[i])
-  
-  a <- read.table(DEG[i], header= F, fill= T)
-  
-  a = a[-1,]
-  
-  #dim(a) check if all the rows include
-  
-  #bed format covert to a Grange project
-  
-  a1 <- data.frame("chrom"=a$V2, "start"=a$V3, "end"= a$V4)
-  
-  df <-makeGRangesFromDataFrame(a1)
-  
-  #associatedGenes
-  
-  gene_DAR <- seq2gene(df, tssRegion = c(-3000, 3000), flankDistance = 100000, TxDb = TxDb.Hsapiens.UCSC.hg19.knownGene, sameStrand = FALSE)
-  
-  geneName <- queryMany(gene_DAR, scopes="entrezgene", fields="symbol", species="human",returnall=TRUE)
-  
-  geneTable <- geneName$response
-  
-  gene <- data.frame("symbol" = geneTable$symbol,"EntrezID" = geneTable$query)
-  
-  ann.name <-substr(DEG[i],44,nchar(DEG[i])-0)
-  
-  genefile <-paste0("/net/wonderland/home/zhaolinz/practice/PCA/adjustSN0407/genetoDAR.",ann.name,sep="")
-  
-  write.table(gene, file=genefile, quote=F, sep="\t", row.names=F, col.names=T)
-  
-  #enrich.reactctome
-  
-  enrich.reactctome <- enrichPathway(gene_DAR, organism="human")
-  
-  enrich.reactctome<- as.data.frame(summary(enrich.reactctome ))
-  
-  reactomefile <- paste0("/net/wonderland/home/zhaolinz/practice/PCA/adjustSN0407/enrichRea.",ann.name,sep="")
-  
-  write.table(enrich.reactctome, file=reactomefile, quote=F, sep="\t", row.names=F, col.names=T)
-  
-  #enrich.GO.BP
-  
-  go = enrichGO(gene_DAR, OrgDb = "org.Hs.eg.db", ont = "BP", pAdjustMethod = "BH", maxGSSize = 5000)
-  
-  go1 <-dropGO(go, level =1)
-  
-  go1 <-dropGO(go1, level =2)
-  
-  go1 <-dropGO(go1, level =3)
-  
-  go1 <-dropGO(go1, level =4)
-  
-  goBPfile <- paste0("/net/wonderland/home/zhaolinz/practice/PCA/adjustSN0407/enrichGO.5thBP.",ann.name,sep="")
-  
-  write.table(as.data.frame(go1),file=goBPfile, quote=FALSE, row.names=F,sep = "\t")
-  
-  #enrich.GO.MF
-  
-  go = enrichGO(gene_DAR, OrgDb = "org.Hs.eg.db", ont = "MF", pAdjustMethod = "BH", maxGSSize = 5000)
-  
-  go1 <-dropGO(go, level =1)
-  
-  go1 <-dropGO(go1, level =2)
-  
-  go1 <-dropGO(go1, level =3)
-  
-  go1 <-dropGO(go1, level =4)
-  
-  goMFfile <- paste0("/net/wonderland/home/zhaolinz/practice/PCA/adjustSN0407/enrichGO.5thMF.",ann.name,sep="")
-  
-  write.table(as.data.frame(go1),file=goMFfile, quote=FALSE, row.names=F,sep = "\t")
-  
-  #enrich.KEGG
-  
-  KEGG = enrichKEGG(gene_DAR, organism = "hsa", keyType = "kegg", pAdjustMethod = "BH")
-  
-  KEGGfile <-paste0("/net/wonderland/home/zhaolinz/practice/PCA/adjustSN0407/enrichKEGG.",ann.name,sep="")
-  
-  write.table(as.data.frame(KEGG),file=KEGGfile, quote=FALSE, row.names=F,sep = "\t")
-  
-}
