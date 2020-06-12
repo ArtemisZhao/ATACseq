@@ -210,3 +210,9 @@ Following peak calling we would get 3 files.
 - NAME_peaks.xls: Peak table suitable for review in excel.(not actually a xls but a tsv)
 
 - summits.bed: Summit positions for peaks useful for finding motifs and plotting
+
+## Blacklisted regions removal --- ChIPQC
+
+```{r,eval=FALSE}
+Rscript blacklist_remove.R ${blkList.bed} ${peak_file} ${bam_file} 
+```
