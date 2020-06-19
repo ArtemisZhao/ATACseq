@@ -107,10 +107,46 @@ The DEseq2 step generates the following files for future usage and summarize,
 
 ### II. Limma and voom
 
+#### Steps 
+
+ 1. Identify non-redudant peaks 
+
+ 2. Counting for differential ATAC-seq - use __Rsubread__ to count paired reads landing in peaks.
+
+ 3. Construct voom weight.
+ 
+ 4. Perform limma model on different contrasts.
+ 
+ 5. Annotate peaks to nearest genes.
+ 
+ 6. Save DAR files to output directory
+
 #### Command
 ```{r,eval=FALSE}
-Rscript voom_limma.R ${count_matrix} ${covariate} \
+Rscript voom_limma.R ${ID} ${covariate} ${blkList.bed}\
+--peak_dir {path_to_peakfiles} \
+--bam_dir {path_to_bamfiles} \
 --output_dir {path_to_output} \
---add_cov ${StN_ratio}
+--add_cov ${StN_ratio}\
+--filter 6900
 ```
+
+#### Input
+While using the __limma_voom.R__ script presented above, please refer to __DEseq.R__ guidance, they follow the same input rules.
+
+
+- {--filter} determines the lower bound of counts to be included while calculating the voom weight. Notice the output __voomweight.pdf__ plot should be utilized to determine whether the {--filter} parameter is well defined.
+
+#### Output
+
+The voom_limma step generates the following files for future usage and summarize, 
+
+- {countMatrix}: count matrix records the counts landing in peaks;
+
+- {voomweight.pdf} : plot presented voom weight ( mean versus variance relationship; and weight for each individual)
+
+- {voomWithQualityWeights.RData}
+
+- Files that records the contrast(group) information, the corresponding p-values for the siginificant peaks, and genes anotated to the peaks. These files are named by following the pattern of {Group_CD4CLAp0hct_vs_CD4CLAn0hct.DAR.txt}, in which CD4CLAp0hct anc CD4CLAn0hct are replaced by different groups existing in the covariate factor.
+
 

@@ -30,6 +30,7 @@ p<-add_argument(p, "--peak_dir", short="-pdir", default=".", help='Peak file dir
 p<-add_argument(p,"--bam_dir",short="-bdir", default=".", help='Bam file directory')
 p<-add_argument(p, "--output_dir",short="-o",default=".",help="Output directory")
 p<-add_argument(p, "--add_cov", default=NULL, help="Additional covariate, e.g. signal to noise ratio")
+p<-add_argument(p,"--cont",help="Whether the additional covariate is continuous",flag=TRUE)
 argv<-parse_args(p)
 
 
@@ -53,8 +54,12 @@ if(length(peakname)==length(myPeaks)) {
 Group <- factor(t(read.table(argv$group_name))) 
 
 if (!argv$add_cov=="NULL"){
-AddGroup <- factor(t(read.table(argv$add_cov)))
+  if (isTRUE(argv$cont)){
+    AddGroup <- as.numeric(t(read.table(argv$add_cov)))
+  }else{
+    AddGroup<-factor(t(read.table(argv$add_cov)))}
 }
+
 
 #consensusToCount <- soGGi:::runConsensusRegions(GRangesList(myPeaks), "none")
 myGRangesList<-GRangesList(myPeaks)   
@@ -69,14 +74,13 @@ consensusToCount<-reducedConsensus
 
 
 cat("Blacklisted region removal ... \n")
-
 blklist <- import.bed(argv$blkList)
 
 ###################################### this step add chr to seqnames
 consensusToCount<- addchr(consensusToCount)
 consensusToCount <- consensusToCount[!consensusToCount %over% blklist ]
 
-save(consensusToCount,file=paste0(argv$output_dir,"/consensusToCount.Rdata",sep=""))
+#save(consensusToCount,file=paste0(argv$output_dir,"/consensusToCount.Rdata",sep=""))
 
 cat("Keeping peaks present in more than two replicates ...\n ")
 
@@ -86,13 +90,14 @@ occurrences <- elementMetadata(consensusToCount) %>% as.data.frame %>% dplyr::se
 #table(occurrences) %>% rev %>% cumsum
 consensusToCount <- consensusToCount[occurrences >= 2, ] 
 
-save(consensusToCount,file=paste0(argv$output_dir,"/consensusToCount2.Rdata",sep=""))
+save(consensusToCount,file=paste0(argv$output_dir,"/consensusToCount.Rdata",sep=""))
 
 cat("Loading in bam files ...\n")
 bamsToCount <- dir(argv$bam_dir, full.names = TRUE, pattern = "*.\\.bam$")
 
 # indexBam(bamsToCount)
 
+cat("Calculating counts landing in peaks")
 regionsToCount <- data.frame(GeneID = paste("ID", seqnames(consensusToCount),
               start(consensusToCount), end(consensusToCount), sep = "_"), Chr = seqnames(consensusToCount),
               Start = start(consensusToCount), End = end(consensusToCount), Strand = strand(consensusToCount))
@@ -104,34 +109,42 @@ myCounts <- fcResults$counts
 
 colnames(myCounts) <- peakname
 
-save(myCounts, file = paste0(argv$output_dir,"/countsFromATAC.RData"))
+save(myCounts, file = paste0(argv$output_dir,"/countMatrix.RData"))
 
+
+##############################################################################
 cat("DEseq differential analysis ...\n")
 if (!argv$add_cov=="NULL"){
-  metaData <- data.frame(cbind(Group,AddGroup), row.names = colnames(myCounts))
-  atacDDS <- DESeqDataSetFromMatrix(myCounts, metaData, ~Group+AddGroup+Group:AddGroup, 
+  metaData <- as.data.frame(Group=Group,AddGroup=AddGroup, row.names = colnames(myCounts))
+  atacDDS <- DESeqDataSetFromMatrix(myCounts, metaData, ~Group+AddGroup, 
                                     rowRanges = consensusToCount) 
   atacDDS <- DESeq(atacDDS)
-  atac_Rlog <- rlog(atacDDS)
+  atac_Rlog <- vst(atacDDS,blind=TRUE)
   
   save(atacDDS,file=paste0(argv$output_dir,"/atacDDS.Rdata"))
   
   } else{
-  metaData <- data.frame(cbind(Group), row.names = colnames(myCounts))
+  metaData <- data.frame(Group=Group,AddGroup=AddGroup, row.names = colnames(myCounts))
  atacDDS <- DESeqDataSetFromMatrix(myCounts, metaData, ~Group, rowRanges = consensusToCount) 
  atacDDS <- DESeq(atacDDS)
- atac_Rlog <- rlog(atacDDS)
+ atac_Rlog <- vst(atacDDS)
 
  save(atacDDS,file=paste0(argv$output_dir,"/atacDDS.Rdata"))
-}
+  }
+
+pdf(file=paste0(argv$output_dir,"atacPCA.pdf"),width=6,height=6.6,bg="white",pointsize=14)
+plotPCA(atac_Rlog, intgroup = "Group", ntop = nrow(atac_Rlog))
+dev.off()
+
 
 resultname1<-resultsNames(atacDDS)
+resultname1 <- resultname1[grepl("vs_",resultname1)]
 
-resultname<- gsub("vs_","",resultname)
-resultname <- strsplit(resultname,c("_"))[-1]
+resultname<- gsub("vs_","",resultname1)
+resultname <- strsplit(resultname,c("_"))
 
 
-a <- lapply(resultname[1:2],
+a <- lapply(resultname,
             function(x){
               res <- results(atacDDS, contrast=x, format = "GRanges") 
               res <- res[order(res$pvalue)]
@@ -144,5 +157,6 @@ a <- lapply(resultname[1:2],
             })
 
 for (i in 1:length(a)){
-  write.table(a[[i]], file=paste0(argv$output_dir,"/",resultname1[i+1],".txt"), quote=F, sep="\t", row.names=T, col.names=T)
+  write.table(a[[i]], file=paste0(argv$output_dir,"/",resultname1[i],".txt"), quote=F, sep="\t", row.names=T, col.names=T)
 }
+
