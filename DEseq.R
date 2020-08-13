@@ -124,7 +124,7 @@ if (!argv$add_cov=="NULL"){
   save(atacDDS,file=paste0(argv$output_dir,"/atacDDS.Rdata"))
   
   } else{
-  metaData <- data.frame(Group=Group,AddGroup=AddGroup, row.names = colnames(myCounts))
+  metaData <- data.frame(Group=Group, row.names = colnames(myCounts))
  atacDDS <- DESeqDataSetFromMatrix(myCounts, metaData, ~Group, rowRanges = consensusToCount) 
  atacDDS <- DESeq(atacDDS)
  atac_Rlog <- vst(atacDDS)
