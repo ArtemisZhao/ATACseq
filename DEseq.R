@@ -29,10 +29,8 @@ p<-add_argument(p, "blkList", help="black list bed file")
 p<-add_argument(p, "--peak_dir", short="-pdir", default=".", help='Peak file directory')
 p<-add_argument(p,"--bam_dir",short="-bdir", default=".", help='Bam file directory')
 p<-add_argument(p, "--output_dir",short="-o",default=".",help="Output directory")
-p<-add_argument(p, "--add_cov", default=NULL, help="Additional covariate, e.g. signal to noise ratio")
 p<-add_argument(p,"--cont",help="Whether the additional covariate is continuous",flag=TRUE)
 argv<-parse_args(p)
-
 
 cat("Identifying a set of non-redudant peaks ...\n")
 
@@ -51,15 +49,7 @@ if(length(peakname)==length(myPeaks)) {
   names(myPeaks) <- peakname
 }
 
-Group <- factor(t(read.table(argv$group_name))) 
-
-if (!argv$add_cov=="NULL"){
-  if (isTRUE(argv$cont)){
-    AddGroup <- as.numeric(t(read.table(argv$add_cov)))
-  }else{
-    AddGroup<-factor(t(read.table(argv$add_cov)))}
-}
-
+Group <- read.table(argv$group_name,header=T)
 
 #consensusToCount <- soGGi:::runConsensusRegions(GRangesList(myPeaks), "none")
 myGRangesList<-GRangesList(myPeaks)   
@@ -113,40 +103,31 @@ save(myCounts, file = paste0(argv$output_dir,"/countMatrix.RData"))
 
 
 ##############################################################################
-cat("DEseq differential analysis ...\n")
-if (!argv$add_cov=="NULL"){
-  metaData <- as.data.frame(Group=Group,AddGroup=AddGroup, row.names = colnames(myCounts))
-  atacDDS <- DESeqDataSetFromMatrix(myCounts, metaData, ~Group+AddGroup, 
+ cat("DEseq differential analysis ...\n")
+
+ ###contains a hard coding part
+ atacDDS <- DESeqDataSetFromMatrix(myCounts, Group, ~Psphen+Celltype+
+                                      Treat+skinhoming+Agebin+Celltype:Treat+
+                                      Celltype:skinhoming+skinhoming:Treat+Gender, 
                                     rowRanges = consensusToCount) 
   atacDDS <- DESeq(atacDDS)
   atac_Rlog <- vst(atacDDS,blind=TRUE)
   
   save(atacDDS,file=paste0(argv$output_dir,"/atacDDS.Rdata"))
   
-  } else{
-  metaData <- data.frame(Group=Group, row.names = colnames(myCounts))
- atacDDS <- DESeqDataSetFromMatrix(myCounts, metaData, ~Group, rowRanges = consensusToCount) 
- atacDDS <- DESeq(atacDDS)
- atac_Rlog <- vst(atacDDS)
 
- save(atacDDS,file=paste0(argv$output_dir,"/atacDDS.Rdata"))
-  }
+ #pdf(file=paste0(argv$output_dir,"atacPCA.pdf"),width=6,height=6.6,bg="white",pointsize=14)
+ #plotPCA(atac_Rlog, intgroup = "Group", ntop = nrow(atac_Rlog))
+ #dev.off()
 
-pdf(file=paste0(argv$output_dir,"atacPCA.pdf"),width=6,height=6.6,bg="white",pointsize=14)
-plotPCA(atac_Rlog, intgroup = "Group", ntop = nrow(atac_Rlog))
-dev.off()
+ resultname1<-resultsNames(atacDDS)
+
+ resultname <- resultname1[-1]
 
 
-resultname1<-resultsNames(atacDDS)
-resultname1 <- resultname1[grepl("vs_",resultname1)]
-
-resultname<- gsub("vs_","",resultname1)
-resultname <- strsplit(resultname,c("_"))
-
-
-a <- lapply(resultname,
+ a <- lapply(resultname,
             function(x){
-              res <- results(atacDDS, contrast=x, format = "GRanges") 
+              res <- results(atacDDS, name=x, format = "GRanges") 
               res <- res[order(res$pvalue)]
               res <- res[(!is.na(res$padj) & res$padj < 0.05 & abs(res$log2FoldChange) >= 0.585), ]
               gr <- annotatePeak(res,TxDb = TxDb.Hsapiens.UCSC.hg19.knownGene)
@@ -160,3 +141,5 @@ for (i in 1:length(a)){
   write.table(a[[i]], file=paste0(argv$output_dir,"/",resultname1[i],".txt"), quote=F, sep="\t", row.names=T, col.names=T)
 }
 
+ 
+ 

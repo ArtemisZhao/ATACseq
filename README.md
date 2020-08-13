@@ -77,7 +77,6 @@ Rscript DEseq.R ${ID} ${covariate} ${blkList.bed}\
 --peak_dir {path_to_peakfiles} \
 --bam_dir {path_to_bamfiles} \
 --output_dir {path_to_output} \
---add_cov ${StN_ratio}
 ```
 
 #### Input
@@ -86,13 +85,13 @@ While using the __DEseq.R__ script presented above, two text files that record t
 
 - {ID} should record the ID of each file, and should be consistent with the sequence of the covariate information. e.g., id1_24h, id2_0h... 
 
-- {covariate} denotes the group that each bam file belongs to, e.g., 24h v.s. 0h; or more complicated, CD8CLAp v.s. CD8CLAn v.s. CD4CLAp... 
+- {covariate} contains the covariate information;
 
 - {--peak_dir} points to a directory that preserves all the narrowPeak files output by the Peak calling step. 
 
 - {--bam_dir} contains all the bam files that user intends to include in the analysis, e.g., filtered bam files output by the blacklist removal step.
 
-- {--add_cov}, there is an optional argument that allows user to add in one additional covaraite, e.g., signal-to-noise ratio, age and etc. The default is NULL.
+
 
 #### Output
 
